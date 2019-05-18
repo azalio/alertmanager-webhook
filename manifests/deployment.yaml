@@ -10,7 +10,7 @@ spec:
       name: alert-webhook
     spec:
       containers:
-      - image: aixeshunter/alertmanager_webhook:v1.0
+      - image: azalio/alertmanager-webhook
         name: alert-webhook
         ports:
         - containerPort: 5000
