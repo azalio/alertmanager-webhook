@@ -28,5 +28,4 @@ spec:
           periodSeconds: 120
       volumes:
       - name: alerts
-        hostPath:
-          path: /var/lib/alerts/
+        emptyDir: {}

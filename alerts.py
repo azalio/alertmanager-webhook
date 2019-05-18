@@ -1,15 +1,26 @@
-from flask import Flask
-from flask import request
 import logging
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-from flask import jsonify
 import os
+import pprint
+from datetime import datetime
 
+from flask import Flask
+from flask import jsonify
+from flask import request
+from flask_sqlalchemy import SQLAlchemy
+from icq.bot import ICQBot
+
+NAME = "toor"
+VERSION = "0.0.1"
+ICQ_BOT_TOKEN = os.environ['ICQ_BOT_TOKEN']
+ICQ_CHAT_UIN = os.environ['ICQ_CHAT_UIN']
+bot = ICQBot(token=ICQ_BOT_TOKEN, name=NAME, version=VERSION)
 
 DB_PATH = os.environ.get('DB_PATH', '/var/lib/alerts/alert.db')
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_PATH
+
+open(DB_PATH, 'a').close()
 db = SQLAlchemy(app)
 
 TIME_SEC = 24 * 60 * 60
@@ -17,7 +28,6 @@ RESOLVED = "resolved"
 
 
 class Alerts(db.Model):
-
     __tablename__ = 'alerts'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -116,10 +126,13 @@ def send():
         if request.method == 'POST':
             post_data = request.get_json()
             alert_data(post_data)
+            for alert in post_data['alerts']:
+                [alert.pop(x, None) for x in ['endsAt', 'generatorURL']]
+                message = pprint.pformat(alert, indent=0)
+                send_message(message)
     except Exception as e:
         logging.error("Storing alerts failed: %s", e)
         return "Error", 500
-
     return "OK", 200
 
 
@@ -169,6 +182,14 @@ def hash_value(labels, starts):
     hash_str = labels.get("alertname", '') + labels.get("instance", "") + starts
 
     return hash(hash_str)
+
+
+def send_message(message):
+    try:
+        bot.send_im(target=ICQ_CHAT_UIN, message=message)
+    except Exception as ex:
+        logging.error("Errors: {}".format(ex))
+        pass
 
 
 if __name__ == '__main__':
